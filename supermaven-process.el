@@ -1,7 +1,11 @@
-
-(defvar supermaven-process nil)
+(require 'json)
 
 (defconst supermaven-buffer "*supermaven-messages*")
+
+(defvar supermaven-process nil)
+(defvar supermaven-compl-callback nil)
+(defvar supermaven-current-state-id -1)
+(defvar supermaven-current-compl "")
 
 (defun supermaven-filter(process string)
   (let ((buf(get-buffer-create "*supermaven*")))
@@ -10,14 +14,19 @@
 	  (goto-char (point-max))
 	  (insert string)))
 
-  (when (string-prefix-p "SM-MESSAGE" string)
-	(let ((json (json-parse-string (substring string 10))))
-	  (supermaven-process json)))
-)
+  (while (string-match "SM-MESSAGE" string)
+	(let ((offset (string-match "SM-MESSAGE" string))
+		  (next (string-match "SM-MESSAGE" string 10)))
+	  (when offset
+		(supermaven-process (json-parse-string (substring string 11 (if next next (length string))))))
+	  (if next
+		  (setq string (substring string next))
+		(setq string "")))))
 
-(defun supermaven-process-start()
+(defun supermaven-process-start(compl-callback)
   (when supermaven-process
 	(delete-process supermaven-process))
+  (setq supermaven-compl-callback compl-callback)
   (setq supermaven-process (make-process :name "supermaven"
 										 :command '("/home/chep/outils/supermaven/sm-agent" "stdio")
 										 :connection-type 'pipe
@@ -30,9 +39,9 @@
 
 (defun supermaven-process(json)
   (cond ((string= (gethash "kind" json) "response")
-		 (supermaver-update-state-id json))
+		 (supermaven-update-state-id json))
 		((string= (gethash "kind" json) "metadata")
-		 (supermaver-update-metadata json))
+		 (supermaven-update-metadata json))
 		((string= (gethash "kind" json) "activation_request")
 		 (save-excursion
 		   (set-buffer (get-buffer-create supermaven-messages))
@@ -50,9 +59,25 @@
 	(process-send-string supermaven-process (concat message "\n"))
 )
 
-(defun supermaver-update-state-id(json))
+(defun supermaven-update-state-id(json)
+  (let ((state-id (string-to-number (gethash "stateId" json))))
+	(if (= state-id supermaven-current-state-id)
+		(let ((items (gethash "items" json)))
+		  (seq-doseq (item items)
+			(cond ((string= (gethash "kind" item) "text")
+				   (setq supermaven-current-compl (concat supermaven-current-compl (gethash "text" item))))
+				  ((string= (gethash "kind" item) "end")
+				   (when supermaven-compl-callback
+					 (supermaven-compl-callback supermaven-current-compl)
+					 (setq supermaven-current-compl ""
+						   supermaven-current-state-id (1+ supermaven-current-state-id)))))))
+	  (progn
+		(setq supermaven-current-compl ""
+			  supermaven-current-state-id state-id)
+		(supermaven-update-state-id json)))))
 
-(defun supermaver-update-metadata(json))
+
+(defun supermaven-update-metadata(json))
 
 
 (provide 'supermaven-process)
