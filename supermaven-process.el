@@ -1,6 +1,9 @@
 (require 'json)
 
 (defconst supermaven-buffer "*supermaven-messages*")
+(defcustom supermaven-blob-path "/home/chep/outils/supermaven/sm-agent"
+  "Path to the supermaven blob"
+  :group 'supermaven)
 
 (defvar supermaven-process nil)
 (defvar supermaven-compl-callback nil)
@@ -28,7 +31,7 @@
 	(delete-process supermaven-process))
   (setq supermaven-compl-callback compl-callback)
   (setq supermaven-process (make-process :name "supermaven"
-										 :command '("/home/chep/outils/supermaven/sm-agent" "stdio")
+										 :command (list supermaven-blob-path "stdio")
 										 :connection-type 'pipe
 										 :filter 'supermaven-filter)))
 
