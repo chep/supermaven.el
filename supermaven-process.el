@@ -47,13 +47,13 @@
 		 (supermaven-update-metadata json))
 		((string= (gethash "kind" json) "activation_request")
 		 (save-excursion
-		   (set-buffer (get-buffer-create supermaven-messages))
+		   (set-buffer (get-buffer-create supermaven-buffer))
 		   (goto-char (point-max))
 		   (insert (concat "Activation request : "
 						   (gethash "activateUrl" json) "\n"))))
 		((string= (gethash "kind" json) "activation_success")
 		 (save-excursion
-		   (set-buffer (get-buffer-create supermaven-messages))
+		   (set-buffer (get-buffer-create supermaven-buffer))
 		   (goto-char (point-max))
 		   (insert "Supermaven was activated successfully.\n")))
 		))
@@ -81,6 +81,5 @@
 
 
 (defun supermaven-update-metadata(json))
-
 
 (provide 'supermaven-process)
