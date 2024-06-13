@@ -21,6 +21,9 @@
 					   (concat (json-serialize #s(hash-table test equal data ("kind" "use_free_version")))
 							   "\n")))
 
+(defun supermaven-complete()
+  (interactive)
+  (supermaven-on-update (current-buffer) t))
 
 (defun supermaven-on-update (buffer do-send-file)
   (let* ((hash (make-hash-table :test 'equal))
@@ -46,8 +49,7 @@
 
 	(puthash "updates" updates hash)
 
-	(supermaven-send (json-serialize hash))
-	))
+	(supermaven-send (json-serialize hash))))
 
 (defun supermaven-compl-callback(completion)
   (supermaven-clear-overlay)
